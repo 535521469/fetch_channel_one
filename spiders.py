@@ -8,6 +8,7 @@ from scrapy import log
 from scrapy.http.request import Request
 from scrapy.selector import HtmlXPathSelector
 from scrapy.spider import BaseSpider
+import itertools
 
 class ChannelOneSpider(BaseSpider):
     
@@ -16,24 +17,49 @@ class ChannelOneSpider(BaseSpider):
     home_page = u"http://www.1channel.ch"
     index_page = u'%s/index.php' % home_page
 
+    def get_next_proxy(self, cookies):
+        return cookies[u'proxies'].next()
+
 class ChannelOneListSpider(ChannelOneSpider):
     
     name = u'ChannelOneListSpider'
-    DOWNLOAD_DELAY = 1
+#    DOWNLOAD_DELAY = 1
     
     def start_requests(self):
+        cookies = build_cookies(self)
         page_no = 1
-        yield self.make_requests_from_url('%s?page=%s' % (self.index_page, page_no))
+#        yield self.make_requests_from_url()
+        yield Request('%s?page=%s' % (self.index_page, page_no),
+                      self.parse, cookies=cookies,
+                      meta={u'proxy':cookies[u'proxies'].next()},
+                      )
 
     def parse(self, response):
         
         hxs = HtmlXPathSelector(response)
         block_a_tags = hxs.select('//div[@class="index_container"]//div[@class="index_item index_item_ie"]/a')
         
+        cookies = response.request.cookies
+        
+        with open(u'fetched.txt', u'r') as f:
+            fetched_urls = map(str.strip, f.readlines())
+        
         for a_tag in block_a_tags:
+            
             href = a_tag.select('@href')
+            
+            with open(u'detail.txt', u'a') as f:
+                f.write('%s@@@@@%s\n' % (self.home_page + href.extract()[0], response.url))
+            
+            if self.home_page + href.extract()[0] in fetched_urls:
+                continue
+                
             yield Request(self.home_page + href.extract()[0],
-                          ChannelOneDetailSpider().parse, dont_filter=True)
+                          ChannelOneDetailSpider().parse,
+                          dont_filter=True,
+                          meta={u'proxy':cookies[u'proxies'].next()},
+                          cookies=cookies
+                          )
             
         page_div_tag = hxs.select('//div[@class="pagination"]')
         current_page = page_div_tag.select('span[@class="current"]/text()').extract()[0]
@@ -42,14 +68,20 @@ class ChannelOneListSpider(ChannelOneSpider):
         
         self.log(u"add next page %s " % next_page, log.INFO)
         
-        yield Request(next_page, self.parse)
+        yield Request(next_page, self.parse,
+                      meta={u'proxy':cookies[u'proxies'].next()},
+                      cookies=cookies)
         
 
 class ChannelOneDetailSpider(ChannelOneSpider):
     
-    DOWNLOAD_DELAY = 2
+#    DOWNLOAD_DELAY = 2
     
     def parse(self, response):
+        
+        with open(u'fetched.txt', u'a') as f:
+            f.write(response.url + u'\n')
+        
         hxs = HtmlXPathSelector(response)
         mi = MovieItem()
         
@@ -109,8 +141,11 @@ class ChannelOneDetailSpider(ChannelOneSpider):
         
         self.log(u"add %s" % url, log.INFO)
         yield mi
-            
-                
-                
-                
         
+def build_cookies(self):
+    ipproxies = self.settings[u'proxies']
+    ipproxy_generator = itertools.cycle(ipproxies)
+    cookies = {
+               u'proxies':ipproxy_generator
+               }
+    return cookies

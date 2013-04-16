@@ -9,5 +9,11 @@ from scrapy.settings import CrawlerSettings
 if __name__ == '__main__':
     import_modules = __import__('settings', globals={}
                                 , locals={}, fromlist=['', ])
-    settings = CrawlerSettings(import_modules)
+    
+    proxies = []
+    
+    with open(u'proxy.txt', u'r') as f:
+        proxies = map(str.strip, f.readlines())
+    
+    settings = CrawlerSettings(import_modules, values={u'proxies':proxies})
     execute(['scrapy', 'crawl', 'ChannelOneListSpider', ], settings=settings)
