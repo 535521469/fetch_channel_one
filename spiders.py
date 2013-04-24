@@ -21,18 +21,8 @@ class ChannelOneSpider(BaseSpider):
         return cookies[u'proxies'].next()
 
 class ChannelOneListSpider(ChannelOneSpider):
-    
+
     name = u'ChannelOneListSpider'
-#    DOWNLOAD_DELAY = 1
-    
-    def start_requests(self):
-        cookies = build_cookies(self)
-        page_no = 1
-#        yield self.make_requests_from_url()
-        yield Request('%s?page=%s' % (self.index_page, page_no),
-                      self.parse, cookies=cookies,
-                      meta={u'proxy':cookies[u'proxies'].next()},
-                      )
 
     def parse(self, response):
         
@@ -41,8 +31,11 @@ class ChannelOneListSpider(ChannelOneSpider):
         
         cookies = response.request.cookies
         
-        with open(u'fetched.txt', u'r') as f:
-            fetched_urls = map(str.strip, f.readlines())
+        try:
+            with open(u'fetched.txt', u'r') as f:
+                fetched_urls = map(str.strip, f.readlines())
+        except Exception:
+            fetched_urls = []
         
         for a_tag in block_a_tags:
             
@@ -60,7 +53,8 @@ class ChannelOneListSpider(ChannelOneSpider):
                           meta={u'proxy':cookies[u'proxies'].next()},
                           cookies=cookies
                           )
-            
+        with open(u'text.html', u'w') as f:
+            f.write(response.body)
         page_div_tag = hxs.select('//div[@class="pagination"]')
         current_page = page_div_tag.select('span[@class="current"]/text()').extract()[0]
         
@@ -71,11 +65,34 @@ class ChannelOneListSpider(ChannelOneSpider):
         yield Request(next_page, self.parse,
                       meta={u'proxy':cookies[u'proxies'].next()},
                       cookies=cookies)
+
+class ChannelOneMoiveListSpider(ChannelOneListSpider):
+    
+    name = u'ChannelOneMoiveListSpider'
+    
+    def start_requests(self):
+        cookies = build_cookies(self)
+        page_no = 1721
+        for i in range(1, page_no):
+            yield Request('%s?page=%s' % (self.index_page, i),
+                          self.parse, cookies=cookies,
+                          meta={u'proxy':cookies[u'proxies'].next()},
+                          )
         
+class ChannelOneTVListSpider(ChannelOneListSpider):
+    
+    name = u"ChannelOneTVListSpider"
+    
+    def start_requests(self):
+        cookies = build_cookies(self)
+        page_no = 281
+        for i in range(1, page_no):
+            yield Request(u'%s?tv=&page=%s' % (self.index_page, i), self.parse, cookies=cookies,
+                          meta={u'proxy':cookies[u'proxies'].next()})
 
 class ChannelOneDetailSpider(ChannelOneSpider):
     
-#    DOWNLOAD_DELAY = 2
+    name = u'ChannelOneDetailSpider'
     
     def parse(self, response):
         

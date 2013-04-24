@@ -16,4 +16,5 @@ if __name__ == '__main__':
         proxies = map(str.strip, f.readlines())
     
     settings = CrawlerSettings(import_modules, values={u'proxies':proxies})
-    execute(['scrapy', 'crawl', 'ChannelOneListSpider', ], settings=settings)
+    execute(['scrapy', 'crawl', 'ChannelOneTVListSpider', ], settings=settings)
+#    execute(['scrapy', 'crawl', 'ChannelOneMoiveListSpider', ], settings=settings)
