@@ -7,7 +7,7 @@ Created on 2013-4-15
 BOT_NAME = 'ChannelOneTVListSpider'
 SPIDER_MODULES = ['spiders']
 LOG_LEVEL = 'DEBUG'
-DOWNLOAD_DELAY = 0.3
+DOWNLOAD_DELAY = 0
 LOG_ENCODING = u'UTF-8'
 #LOG_FILE = u'fetch.log'
 ITEM_PIPELINES = [

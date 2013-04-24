@@ -37,34 +37,40 @@ class ChannelOneListSpider(ChannelOneSpider):
         except Exception:
             fetched_urls = []
         
-        for a_tag in block_a_tags:
+        for idx, a_tag in enumerate(block_a_tags):
             
             href = a_tag.select('@href')
             
             with open(u'detail.txt', u'a') as f:
-                f.write('%s@@@@@%s\n' % (self.home_page + href.extract()[0], response.url))
+                f.write('%s@@@@@%s\n' % (response.url, self.home_page + href.extract()[0],))
             
             if self.home_page + href.extract()[0] in fetched_urls:
                 continue
                 
             yield Request(self.home_page + href.extract()[0],
                           ChannelOneDetailSpider().parse,
-                          dont_filter=True,
-                          meta={u'proxy':cookies[u'proxies'].next()},
-                          cookies=cookies
-                          )
+                          dont_filter=True,)
+#                          meta={u'proxy':cookies[u'proxies'].next()},
+#                          cookies=cookies
+#                          )
         with open(u'text.html', u'w') as f:
             f.write(response.body)
         page_div_tag = hxs.select('//div[@class="pagination"]')
-        current_page = page_div_tag.select('span[@class="current"]/text()').extract()[0]
-        
+        try:
+            current_page = page_div_tag.select('span[@class="current"]/text()').extract()[0]
+        except Exception as e:
+            current_page = 1
+            with open(u'page.html', u'w') as f:
+                f.write(response.body)
+            print response.url
         next_page = '%s?page=%s' % (self.index_page, int(current_page) + 1)
         
         self.log(u"add next page %s " % next_page, log.INFO)
         
         yield Request(next_page, self.parse,
-                      meta={u'proxy':cookies[u'proxies'].next()},
-                      cookies=cookies)
+#                      meta={u'proxy':cookies[u'proxies'].next()},
+                      cookies=cookies
+                      )
 
 class ChannelOneMoiveListSpider(ChannelOneListSpider):
     
@@ -86,9 +92,15 @@ class ChannelOneTVListSpider(ChannelOneListSpider):
     def start_requests(self):
         cookies = build_cookies(self)
         page_no = 281
-        for i in range(1, page_no):
-            yield Request(u'%s?tv=&page=%s' % (self.index_page, i), self.parse, cookies=cookies,
-                          meta={u'proxy':cookies[u'proxies'].next()})
+        yield Request(u'%s?tv=&page=1' % (self.index_page,), self.parse,
+                      cookies=cookies,
+                      )
+        
+    def parse(self, response):
+        
+        for req in ChannelOneListSpider().parse(response):
+            if isinstance(req, Request):
+                req.replace(url=u'%s%s' % (req.url, u'&tv='))
 
 class ChannelOneDetailSpider(ChannelOneSpider):
     
